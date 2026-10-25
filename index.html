@@ -1,0 +1,788 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Letras</title>
+<meta name="description" content="Letra sincronizada de cualquier canción, para seguirla mientras suena.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Letras">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+/* Lienzo editorial blanco para buscar; escenario de cine oscuro para la letra.
+   Tokens de replica/design/tokens.json. */
+:root {
+  --bg: #ffffff;
+  --bg-alt: #fafafc;
+  --surface: #f5f5f7;
+  --control: #e2e2e5;
+  --border: #d6d6d6;
+  --text: #1d1d1f;
+  --text-secondary: #5b5b61;
+  --text-muted: #6e6e73;
+  --accent: #0071e3;
+  --on-accent: #ffffff;
+  --link: #0066cc;
+  --danger: #d70015;
+  --success: #1f7a3d;
+
+  --stage-text: #ffffff;
+  --stage-dim: #b4b4b6;
+  --stage-past: #9d9da2;
+  --stage-control: rgba(210, 210, 215, 0.64);
+  --stage-on-control: rgba(0, 0, 0, 0.62);
+  --stage-scrim: rgba(0, 0, 0, 0.45);
+
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, system-ui, sans-serif;
+
+  --r-link: 10px;
+  --r-media: 20px;
+  --r-card: 28px;
+  --r-control: 36px;
+  --gutter-l: max(20px, env(safe-area-inset-left, 0px));
+  --gutter-r: max(20px, env(safe-area-inset-right, 0px));
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #000000; --bg-alt: #161617; --surface: #1c1c1e; --control: #2c2c2e;
+    --border: #38383a; --text: #f5f5f7; --text-secondary: #c7c7cc; --text-muted: #a1a1a6;
+    --link: #2997ff; --danger: #ff6961; --success: #4cd964;
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 17px;
+  line-height: 1.47;
+  letter-spacing: -0.37px;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+button { font: inherit; color: inherit; letter-spacing: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+[hidden] { display: none !important; }
+
+/* ---------- Buscar ---------- */
+#search-view {
+  min-height: 100%;
+  padding: calc(env(safe-area-inset-top, 0px) + 28px) var(--gutter-r) calc(env(safe-area-inset-bottom, 0px) + 40px) var(--gutter-l);
+  max-width: 600px;
+  margin: 0 auto;
+}
+.brand { font-family: var(--font-display); font-size: 34px; font-weight: 600; letter-spacing: 0.37px; margin: 0; }
+.lede { color: var(--text-secondary); margin: 4px 0 20px; }
+.search-box { position: relative; }
+.search-box svg { position: absolute; left: 14px; top: 50%; width: 18px; height: 18px; transform: translateY(-50%); color: var(--text-muted); }
+#q {
+  width: 100%;
+  font: inherit;
+  font-size: 17px;
+  padding: 13px 16px 13px 42px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+  -webkit-appearance: none;
+}
+#q::placeholder { color: var(--text-muted); }
+#q:focus { box-shadow: inset 0 0 0 2px var(--accent); }
+
+.group-title { font-size: 13px; letter-spacing: -0.08px; color: var(--text-muted); text-transform: uppercase; margin: 24px 4px 8px; }
+.card { background: var(--surface); border-radius: var(--r-card); padding: 4px 20px; }
+.result {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; min-height: 64px; padding: 10px 0;
+  border: 0; background: none; text-align: left; cursor: pointer;
+  border-bottom: 0.5px solid var(--border);
+}
+.result:last-child { border-bottom: 0; }
+.cover {
+  width: 44px; height: 44px; border-radius: 10px; flex: none;
+  display: grid; place-items: center; color: rgba(255,255,255,.9);
+}
+.cover svg { width: 20px; height: 20px; }
+.result .meta { flex: 1; min-width: 0; }
+.result b { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.result small { display: block; font-size: 13px; letter-spacing: -0.08px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tag { font-size: 12px; font-weight: 600; letter-spacing: -0.12px; color: var(--text-muted); flex: none; }
+.tag.synced { color: var(--success); }
+.status { color: var(--text-muted); font-size: 15px; padding: 18px 4px; }
+.status.error { color: var(--danger); }
+.foot { font-size: 13px; color: var(--text-muted); margin: 28px 4px 0; letter-spacing: -0.08px; line-height: 1.4; }
+.foot a { color: var(--link); text-decoration: none; }
+.demo-link { background: none; border: 0; color: var(--link); padding: 0; cursor: pointer; font-size: 13px; }
+
+/* ---------- Escenario ---------- */
+#player-view {
+  position: fixed; inset: 0;
+  color: var(--stage-text);
+  background: #000;
+  overflow: hidden;
+}
+.stage-bg { position: absolute; inset: 0; transition: background 600ms ease; }
+.stage-bg::after { content: ""; position: absolute; inset: 0; background: var(--stage-scrim); }
+.topbar {
+  position: absolute; left: 0; right: 0; top: 0; z-index: 3;
+  display: flex; align-items: center; gap: 12px;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) var(--gutter-r) 10px var(--gutter-l);
+}
+.icon-btn {
+  width: 44px; height: 44px; flex: none;
+  display: grid; place-items: center;
+  border: 0; background: none; cursor: pointer; color: var(--stage-text);
+  border-radius: 50%;
+}
+.icon-btn svg { width: 22px; height: 22px; }
+.now { flex: 1; min-width: 0; display: flex; gap: 12px; align-items: center; }
+.now .cover { width: 48px; height: 48px; }
+.now b { display: block; font-size: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.now small { display: block; font-size: 13px; color: var(--stage-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+#lyrics {
+  position: absolute; inset: 0; z-index: 1;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 0 var(--gutter-r) 0 var(--gutter-l);
+}
+#lyrics::-webkit-scrollbar { display: none; }
+.lines { max-width: 560px; margin: 0 auto; padding: 38vh 0 60vh; display: flex; flex-direction: column; gap: 18px; }
+.line {
+  font-family: var(--font-display);
+  font-size: clamp(26px, 7.4vw, 34px);
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  color: var(--stage-dim);
+  transform: scale(.94);
+  transform-origin: left center;
+  transition: color 300ms ease, transform 450ms cubic-bezier(.2,.8,.2,1);
+  cursor: pointer;
+  text-wrap: balance;
+}
+.line.past { color: var(--stage-past); }
+.line.active { color: var(--stage-text); transform: none; }
+.line .w { color: var(--stage-dim); transition: color 120ms linear; }
+.line .w.on { color: var(--stage-text); }
+.line.gap { display: flex; gap: 8px; padding: 6px 0; }
+.line.gap i { width: 10px; height: 10px; border-radius: 50%; background: var(--stage-text); opacity: .35; transition: opacity 200ms; }
+.line.gap i.on { opacity: 1; }
+.plain { white-space: pre-wrap; font-family: var(--font-display); font-size: 24px; line-height: 1.4; font-weight: 600; max-width: 560px; margin: 0 auto; padding: calc(env(safe-area-inset-top, 0px) + 90px) 0 200px; }
+.plain-note { display: block; font-family: var(--font); font-size: 13px; font-weight: 400; color: var(--stage-dim); margin-bottom: 20px; }
+
+.hint {
+  position: absolute; z-index: 2; left: 50%; transform: translateX(-50%);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 96px);
+  width: min(92vw, 420px);
+  text-align: center; font-size: 15px; color: var(--stage-text);
+  background: rgba(0,0,0,.35); border-radius: 18px; padding: 12px 16px;
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  transition: opacity 300ms;
+}
+.return {
+  position: absolute; z-index: 2; left: 50%; transform: translateX(-50%);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 96px);
+  border: 0; border-radius: 9999px; padding: 9px 16px; cursor: pointer;
+  background: var(--stage-control); color: var(--stage-on-control); font-size: 15px;
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+}
+
+.bar {
+  position: absolute; z-index: 3;
+  left: max(16px, env(safe-area-inset-left, 0px));
+  right: max(16px, env(safe-area-inset-right, 0px));
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+  max-width: 560px; margin: 0 auto;
+  height: 60px; border-radius: var(--r-control);
+  display: flex; align-items: center; gap: 2px; padding: 0 8px;
+  background: var(--stage-control); color: var(--stage-on-control);
+  backdrop-filter: blur(24px) saturate(1.4); -webkit-backdrop-filter: blur(24px) saturate(1.4);
+}
+.bar .icon-btn { color: var(--stage-on-control); }
+.bar .icon-btn svg { width: 20px; height: 20px; }
+.progress { flex: 1; min-width: 40px; display: flex; flex-direction: column; gap: 4px; padding: 0 6px; }
+.rail { height: 4px; border-radius: 9999px; background: rgba(0,0,0,.2); overflow: hidden; }
+.rail i { display: block; height: 100%; width: 0; background: var(--stage-on-control); }
+.times { display: flex; justify-content: space-between; font-size: 11px; font-variant-numeric: tabular-nums; letter-spacing: 0; }
+.offset { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; min-width: 44px; text-align: center; letter-spacing: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .line, .stage-bg { transition: none; }
+  .line { transform: none; }
+}
+</style>
+</head>
+<body>
+
+<main id="search-view">
+  <h1 class="brand">Letras</h1>
+  <p class="lede">Busca la canción que vas a poner y síguela línea por línea.</p>
+  <form id="search-form" class="search-box" role="search" autocomplete="off">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <label for="q" class="visually-hidden" hidden>Canción o artista</label>
+    <input id="q" name="q" type="search" inputmode="search" enterkeyhint="search" placeholder="Canción o artista" aria-label="Canción o artista">
+  </form>
+
+  <div id="results-wrap">
+    <p class="group-title" id="results-title" hidden>Resultados</p>
+    <div class="card" id="results" hidden></div>
+    <p class="status" id="status" hidden></p>
+  </div>
+
+  <div id="recent-wrap" hidden>
+    <p class="group-title">Recientes</p>
+    <div class="card" id="recent"></div>
+  </div>
+
+  <p class="foot">
+    Las letras vienen de <a href="https://lrclib.net" target="_blank" rel="noopener">LRCLIB</a>, una base abierta.
+    En Safari toca Compartir y luego <b>Agregar a inicio</b> para tenerla como app.
+    ¿Sin música a la mano? <button type="button" class="demo-link" id="demo-btn">Prueba la canción de muestra</button>.
+  </p>
+</main>
+
+<section id="player-view" hidden aria-label="Letra">
+  <div class="stage-bg" id="stage-bg"></div>
+  <div id="lyrics" aria-live="off"></div>
+
+  <header class="topbar">
+    <button class="icon-btn" id="back-btn" type="button" aria-label="Volver a buscar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7"/></svg>
+    </button>
+    <div class="now">
+      <div class="cover" id="now-cover" aria-hidden="true"></div>
+      <div style="min-width:0"><b id="now-title"></b><small id="now-artist"></small></div>
+    </div>
+  </header>
+
+  <p class="hint" id="hint">Toca ▶︎ justo cuando empiece la canción.<br>Si se desfasa, toca la línea que se está cantando.</p>
+  <button class="return" id="return-btn" type="button" hidden>Volver a la línea actual</button>
+
+  <div class="bar" role="toolbar" aria-label="Controles">
+    <button class="icon-btn" id="play-btn" type="button" aria-label="Reproducir"></button>
+    <div class="progress" aria-hidden="true">
+      <div class="rail"><i id="rail-fill"></i></div>
+      <div class="times"><span id="t-pos">0:00</span><span id="t-dur">0:00</span></div>
+    </div>
+    <button class="icon-btn" id="minus-btn" type="button" aria-label="Letra medio segundo antes">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 7 6 12l5 5M18 7l-5 5 5 5"/></svg>
+    </button>
+    <span class="offset" id="offset-label" aria-live="polite">0,0 s</span>
+    <button class="icon-btn" id="plus-btn" type="button" aria-label="Letra medio segundo después">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m13 7 5 5-5 5M6 7l5 5-5 5"/></svg>
+    </button>
+  </div>
+</section>
+
+<script>
+"use strict";
+
+// ---------- Datos ----------
+
+const API = "https://lrclib.net/api";
+
+const DEMO = {
+  id: "demo",
+  trackName: "Luz de madrugada",
+  artistName: "Los Ejemplos",
+  albumName: "Canciones de prueba",
+  duration: 64,
+  syncedLyrics: [
+    "[00:00.00]",
+    "[00:03.00]<00:03.00>Salimos <00:03.60>cuando <00:04.10>nadie <00:04.70>miraba",
+    "[00:07.00]<00:07.00>La <00:07.30>ciudad <00:07.90>se <00:08.10>apaga <00:08.90>y <00:09.10>nosotros <00:09.80>no",
+    "[00:11.00]Cuento las farolas hasta tu puerta",
+    "[00:15.00]Y el reloj se olvida de nosotros",
+    "[00:19.00]",
+    "[00:22.00]Nadie sabe el nombre de esta calle",
+    "[00:26.00]Pero tus pasos se lo saben de memoria",
+    "[00:30.00]Guardo el ruido del último tren",
+    "[00:34.00]Como quien guarda una canción",
+    "[00:38.00]",
+    "[00:41.00]Luz de madrugada, quédate un poco más",
+    "[00:45.00]Que todavía no aprendo a despedirme",
+    "[00:49.00]Luz de madrugada, no le digas al sol",
+    "[00:53.00]Que esta noche fue nuestra",
+    "[00:58.00]",
+  ].join("\n"),
+};
+
+function parseStamp(tag) {
+  const parts = tag.split(":");
+  if (parts.length < 2 || parts.length > 3) return null;
+  const [secStr, fracStr] = parts[parts.length - 1].split(".");
+  if (!/^\d+$/.test(secStr)) return null;
+  const sec = +secStr;
+  if (sec >= 60) return null;
+  let frac = 0;
+  if (fracStr !== undefined) {
+    if (!/^\d{1,3}$/.test(fracStr)) return null;
+    frac = +fracStr * [100, 10, 1][fracStr.length - 1];
+  }
+  const minStr = parts[parts.length - 2];
+  if (!/^\d+$/.test(minStr)) return null;
+  const hours = parts.length === 3 ? (/^\d+$/.test(parts[0]) ? +parts[0] : NaN) : 0;
+  if (Number.isNaN(hours)) return null;
+  return ((hours * 60 + +minStr) * 60 + sec) * 1000 + frac;
+}
+
+/** LRC → [{start, end, text, words:[{start,text}]|null}] (misma lógica que LRCParser.swift) */
+function parseLRC(src, durationMs) {
+  let offset = 0;
+  const entries = [];
+  for (const raw of src.split(/\r?\n/)) {
+    let rest = raw.trimStart();
+    const stamps = [];
+    while (rest.startsWith("[")) {
+      const close = rest.indexOf("]");
+      if (close < 0) break;
+      const tag = rest.slice(1, close);
+      const ms = parseStamp(tag);
+      if (ms !== null) stamps.push(ms);
+      else if (/^offset:/i.test(tag)) offset = parseInt(tag.slice(7), 10) || offset;
+      rest = rest.slice(close + 1);
+    }
+    if (!stamps.length) continue;
+    const { text, words } = parseWords(rest);
+    for (const s of stamps) entries.push({ start: s, text, words });
+  }
+  entries.sort((a, b) => a.start - b.start);
+  const lines = [];
+  for (const e of entries) {
+    const start = Math.max(0, e.start - offset);
+    const words = e.words ? e.words.map(w => ({ start: Math.max(0, w.start - offset), text: w.text })) : null;
+    if (!e.text && (!lines.length || !lines[lines.length - 1].text)) continue;
+    lines.push({ start, end: 0, text: e.text, words });
+  }
+  lines.forEach((l, i) => { l.end = i + 1 < lines.length ? lines[i + 1].start : Math.max(durationMs, l.start); });
+  return lines;
+}
+
+function parseWords(text) {
+  if (!text.includes("<")) return { text: text.trim(), words: null };
+  const words = [];
+  let plain = "", pending = null, rest = text;
+  while (rest.length) {
+    if (rest[0] === "<") {
+      const close = rest.indexOf(">");
+      const ms = close > 0 ? parseStamp(rest.slice(1, close)) : null;
+      if (ms !== null) { pending = ms; rest = rest.slice(close + 1); continue; }
+    }
+    let next = rest.indexOf("<", 1);
+    if (next < 0) next = rest.length;
+    const chunk = rest.slice(0, next);
+    plain += chunk;
+    if (pending !== null) { words.push({ start: pending, text: chunk }); pending = null; }
+    else if (words.length) words[words.length - 1].text += chunk;
+    rest = rest.slice(next);
+  }
+  if (words.length) {
+    words[0].text = words[0].text.trimStart();
+    words[words.length - 1].text = words[words.length - 1].text.trimEnd();
+  }
+  const usable = words.filter(w => w.text);
+  return { text: plain.trim(), words: usable.length ? usable : null };
+}
+
+// ---------- Utilidades ----------
+
+const $ = id => document.getElementById(id);
+const store = {
+  get(key, fallback) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; } },
+  set(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch {} },
+};
+function fmt(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+function hashHue(str) {
+  let h = 0;
+  for (const c of str) h = (h * 31 + c.codePointAt(0)) >>> 0;
+  return h % 360;
+}
+/** Color de "portada" generado del título: sin portadas reales, cada canción tiene su tono. */
+function coverStyle(song) {
+  const h = hashHue(song.trackName + song.artistName);
+  return `linear-gradient(135deg, hsl(${h} 70% 48%), hsl(${(h + 50) % 360} 65% 32%))`;
+}
+function stageStyle(song) {
+  const h = hashHue(song.trackName + song.artistName);
+  // Tonos oscuros (luminancia baja) para que el blanco siempre se lea.
+  return `radial-gradient(120% 70% at 15% 0%, hsl(${h} 70% 30%) 0%, transparent 65%),
+          radial-gradient(110% 80% at 100% 100%, hsl(${(h + 60) % 360} 60% 24%) 0%, transparent 60%),
+          hsl(${h} 35% 9%)`;
+}
+const NOTE_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg>';
+const PLAY_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5Z"/></svg>';
+const PAUSE_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4.5" width="4" height="15" rx="1"/><rect x="14" y="4.5" width="4" height="15" rx="1"/></svg>';
+
+// ---------- Búsqueda ----------
+
+let searchCtl = null;
+let lastResults = [];
+
+function songRow(song, onPick) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "result";
+  const synced = !!song.syncedLyrics || song.hasSynced;
+  const instrumental = song.instrumental;
+  const tagText = instrumental ? "Instrumental" : synced ? "Sincronizada" : (song.plainLyrics || song.hasPlain) ? "Solo texto" : "";
+  btn.innerHTML = `
+    <div class="cover" aria-hidden="true">${NOTE_SVG}</div>
+    <div class="meta"><b></b><small></small></div>
+    <span class="tag ${synced && !instrumental ? "synced" : ""}"></span>`;
+  btn.querySelector(".cover").style.background = coverStyle(song);
+  btn.querySelector("b").textContent = song.trackName;
+  btn.querySelector("small").textContent = [song.artistName, song.duration ? fmt(song.duration * 1000) : ""].filter(Boolean).join(" · ");
+  btn.querySelector(".tag").textContent = tagText;
+  btn.addEventListener("click", () => onPick(song));
+  return btn;
+}
+
+function setStatus(text, isError = false) {
+  const el = $("status");
+  el.hidden = !text;
+  el.textContent = text || "";
+  el.classList.toggle("error", isError);
+}
+
+async function search(q) {
+  q = q.trim();
+  if (searchCtl) searchCtl.abort();
+  if (!q) {
+    $("results").hidden = true; $("results-title").hidden = true; setStatus("");
+    return;
+  }
+  searchCtl = new AbortController();
+  setStatus("Buscando…");
+  try {
+    const res = await fetch(`${API}/search?q=${encodeURIComponent(q)}`, { signal: searchCtl.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    // Primero las sincronizadas; sin duplicados obvios.
+    const seen = new Set();
+    lastResults = data
+      .filter(s => { const k = `${s.trackName}|${s.artistName}|${Math.round(s.duration || 0)}`.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; })
+      .sort((a, b) => (!!b.syncedLyrics - !!a.syncedLyrics))
+      .slice(0, 25);
+    renderResults();
+  } catch (err) {
+    if (err.name === "AbortError") return;
+    $("results").hidden = true; $("results-title").hidden = true;
+    setStatus("No pude buscar. Revisa tu conexión e intenta de nuevo.", true);
+  }
+}
+
+function renderResults() {
+  const box = $("results");
+  box.replaceChildren(...lastResults.map(s => songRow(s, openSong)));
+  box.hidden = !lastResults.length;
+  $("results-title").hidden = !lastResults.length;
+  setStatus(lastResults.length ? "" : "No encontré esa canción. Prueba con el nombre del artista también.");
+}
+
+function renderRecent() {
+  const recent = store.get("letras.recent", []);
+  $("recent-wrap").hidden = !recent.length;
+  $("recent").replaceChildren(...recent.map(s => songRow(s, openRecent)));
+}
+
+function remember(song) {
+  if (song.id === "demo") return;
+  const slim = { id: song.id, trackName: song.trackName, artistName: song.artistName, albumName: song.albumName,
+                 duration: song.duration, instrumental: song.instrumental, hasSynced: !!song.syncedLyrics, hasPlain: !!song.plainLyrics };
+  const list = store.get("letras.recent", []).filter(s => s.id !== song.id);
+  list.unshift(slim);
+  store.set("letras.recent", list.slice(0, 8));
+}
+
+async function openRecent(slim) {
+  setStatus("Abriendo…");
+  try {
+    const res = await fetch(`${API}/get/${slim.id}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    setStatus("");
+    openSong(await res.json());
+  } catch {
+    setStatus("No pude abrir esa canción. Revisa tu conexión.", true);
+  }
+}
+
+let debounce = 0;
+$("q").addEventListener("input", e => { clearTimeout(debounce); debounce = setTimeout(() => search(e.target.value), 350); });
+$("search-form").addEventListener("submit", e => { e.preventDefault(); clearTimeout(debounce); search($("q").value); $("q").blur(); });
+$("demo-btn").addEventListener("click", () => openSong(DEMO));
+
+// ---------- Reproductor ----------
+
+const player = {
+  song: null,
+  lines: [],
+  durationMs: 0,
+  playing: false,
+  anchorMs: 0,
+  anchorAt: 0,
+  offsetMs: 0,
+  active: -2,
+  manualUntil: 0,
+  raf: 0,
+  wakeLock: null,
+};
+
+function position() {
+  return player.playing ? player.anchorMs + (performance.now() - player.anchorAt) : player.anchorMs;
+}
+function lyricPos() { return position() + player.offsetMs; }
+
+function openSong(song) {
+  remember(song);
+  player.song = song;
+  player.durationMs = Math.round((song.duration || 0) * 1000);
+  player.lines = song.syncedLyrics ? parseLRC(song.syncedLyrics, player.durationMs) : [];
+  player.playing = false;
+  player.anchorMs = 0;
+  player.active = -2;
+  player.offsetMs = store.get(`letras.offset.${song.id}`, 0);
+
+  $("now-title").textContent = song.trackName;
+  $("now-artist").textContent = song.artistName || "";
+  $("now-cover").style.background = coverStyle(song);
+  $("now-cover").innerHTML = NOTE_SVG;
+  $("stage-bg").style.background = stageStyle(song);
+  $("t-dur").textContent = fmt(player.durationMs);
+  renderLyrics();
+  updateOffset();
+  updatePlayButton();
+  tick(true);
+
+  $("search-view").hidden = true;
+  $("player-view").hidden = false;
+  $("hint").hidden = !player.lines.length;
+  $("lyrics").scrollTop = 0;
+  document.title = `${song.trackName} · Letras`;
+  try { history.pushState({ player: true }, ""); } catch {}
+}
+
+function closePlayer() {
+  pause();
+  $("player-view").hidden = true;
+  $("search-view").hidden = false;
+  document.title = "Letras";
+  renderRecent();
+}
+
+function renderLyrics() {
+  const box = $("lyrics");
+  const song = player.song;
+  if (!player.lines.length) {
+    const div = document.createElement("div");
+    div.className = "plain";
+    const note = document.createElement("span");
+    note.className = "plain-note";
+    if (song.instrumental) {
+      note.textContent = "Esta canción es instrumental: no tiene letra.";
+    } else if (song.plainLyrics) {
+      note.textContent = "Esta letra no trae tiempos, así que no avanza sola.";
+    } else {
+      note.textContent = "Esta canción aún no tiene letra en LRCLIB.";
+    }
+    div.append(note, document.createTextNode(song.plainLyrics || ""));
+    box.replaceChildren(div);
+    $("lyrics").querySelector(".plain").style.paddingTop = "calc(env(safe-area-inset-top, 0px) + 90px)";
+    return;
+  }
+  const wrap = document.createElement("div");
+  wrap.className = "lines";
+  player.lines.forEach((line, i) => {
+    const p = document.createElement("p");
+    p.style.margin = "0";
+    p.dataset.i = i;
+    if (!line.text) {
+      p.className = "line gap";
+      p.setAttribute("aria-label", "Pausa instrumental");
+      p.innerHTML = "<i></i><i></i><i></i>";
+    } else {
+      p.className = "line";
+      if (line.words) {
+        for (const w of line.words) {
+          const s = document.createElement("span");
+          s.className = "w";
+          s.textContent = w.text;
+          p.append(s);
+        }
+      } else {
+        p.textContent = line.text;
+      }
+    }
+    p.addEventListener("click", () => jumpTo(i));
+    wrap.append(p);
+  });
+  box.replaceChildren(wrap);
+}
+
+function activeIndex(ms) {
+  const L = player.lines;
+  if (!L.length || ms < L[0].start) return -1;
+  let lo = 0, hi = L.length - 1;
+  while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (L[mid].start <= ms) lo = mid; else hi = mid - 1; }
+  return lo;
+}
+
+function scrollToLine(i, smooth = true) {
+  const el = $("lyrics").querySelector(`[data-i="${i}"]`);
+  if (!el) return;
+  const box = $("lyrics");
+  const top = el.offsetTop - box.clientHeight * 0.32;
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  box.scrollTo({ top, behavior: smooth && !reduce ? "smooth" : "auto" });
+}
+
+function tick(force = false) {
+  const pos = position();
+  const lp = lyricPos();
+  const fill = player.durationMs ? Math.min(1, pos / player.durationMs) : 0;
+  $("rail-fill").style.width = `${fill * 100}%`;
+  $("t-pos").textContent = fmt(Math.min(pos, player.durationMs || pos));
+
+  if (player.lines.length) {
+    const idx = activeIndex(lp);
+    const nodes = $("lyrics").querySelectorAll(".line");
+    if (idx !== player.active || force) {
+      nodes.forEach((n, i) => {
+        n.classList.toggle("active", i === idx);
+        n.classList.toggle("past", i < idx);
+      });
+      if (idx >= 0 && performance.now() > player.manualUntil) {
+        scrollToLine(idx, !force);
+        $("return-btn").hidden = true;
+      }
+      player.active = idx;
+    }
+    if (idx >= 0) {
+      const line = player.lines[idx];
+      const node = nodes[idx];
+      if (line.words) {
+        node.querySelectorAll(".w").forEach((w, k) => w.classList.toggle("on", line.words[k].start <= lp));
+      } else if (!line.text) {
+        const prog = (lp - line.start) / Math.max(1, line.end - line.start);
+        node.querySelectorAll("i").forEach((d, k) => d.classList.toggle("on", prog > k / 3));
+      }
+    }
+  }
+
+  // Al terminar la canción, se detiene.
+  if (player.playing && player.durationMs && pos >= player.durationMs + 1500) {
+    player.anchorMs = player.durationMs;
+    pause();
+  }
+  if (player.playing) player.raf = requestAnimationFrame(() => tick());
+}
+
+function play() {
+  if (player.playing) return;
+  if (player.durationMs && player.anchorMs >= player.durationMs) player.anchorMs = 0;
+  player.playing = true;
+  player.anchorAt = performance.now();
+  $("hint").hidden = true;
+  updatePlayButton();
+  keepAwake();
+  cancelAnimationFrame(player.raf);
+  player.raf = requestAnimationFrame(() => tick());
+}
+
+function pause() {
+  if (!player.playing) return;
+  player.anchorMs = position();
+  player.playing = false;
+  cancelAnimationFrame(player.raf);
+  updatePlayButton();
+  releaseAwake();
+  tick();
+}
+
+/** Tocar una línea: "esto se está cantando ahora". Ajusta el reloj y arranca. */
+function jumpTo(i) {
+  const line = player.lines[i];
+  if (!line) return;
+  player.anchorMs = Math.max(0, line.start - player.offsetMs + 60);
+  player.anchorAt = performance.now();
+  player.manualUntil = 0;
+  player.active = -2;
+  $("return-btn").hidden = true;
+  if (!player.playing) play(); else tick(true);
+}
+
+function updatePlayButton() {
+  const btn = $("play-btn");
+  btn.innerHTML = player.playing ? PAUSE_SVG : PLAY_SVG;
+  btn.setAttribute("aria-label", player.playing ? "Pausa" : "Reproducir");
+}
+
+function updateOffset() {
+  const s = player.offsetMs / 1000;
+  $("offset-label").textContent = `${s > 0 ? "+" : s < 0 ? "−" : ""}${Math.abs(s).toFixed(1).replace(".", ",")} s`;
+}
+
+function nudge(deltaMs) {
+  player.offsetMs = Math.max(-10000, Math.min(10000, player.offsetMs + deltaMs));
+  if (player.song) store.set(`letras.offset.${player.song.id}`, player.offsetMs);
+  updateOffset();
+  player.active = -2;
+  tick(true);
+  if (player.playing) { cancelAnimationFrame(player.raf); player.raf = requestAnimationFrame(() => tick()); }
+}
+
+async function keepAwake() {
+  try { if ("wakeLock" in navigator) player.wakeLock = await navigator.wakeLock.request("screen"); } catch {}
+}
+function releaseAwake() {
+  try { player.wakeLock?.release(); } catch {}
+  player.wakeLock = null;
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && player.playing) { keepAwake(); player.active = -2; }
+});
+
+$("play-btn").addEventListener("click", () => (player.playing ? pause() : play()));
+$("minus-btn").addEventListener("click", () => nudge(500));
+$("plus-btn").addEventListener("click", () => nudge(-500));
+$("back-btn").addEventListener("click", () => { try { history.back(); } catch { closePlayer(); } });
+window.addEventListener("popstate", () => { if (!$("player-view").hidden) closePlayer(); });
+$("return-btn").addEventListener("click", () => {
+  player.manualUntil = 0;
+  $("return-btn").hidden = true;
+  if (player.active >= 0) scrollToLine(player.active);
+});
+
+// Si el usuario desplaza la letra, se pausa el autoscroll 4 s.
+["touchmove", "wheel"].forEach(evt => $("lyrics").addEventListener(evt, () => {
+  if (!player.lines.length) return;
+  player.manualUntil = performance.now() + 4000;
+  if (player.playing) $("return-btn").hidden = false;
+}, { passive: true }));
+
+document.addEventListener("keydown", e => {
+  if ($("player-view").hidden || e.target === $("q")) return;
+  if (e.code === "Space") { e.preventDefault(); player.playing ? pause() : play(); }
+  if (e.key === "Escape") closePlayer();
+});
+
+renderRecent();
+</script>
+</body>
+</html>
